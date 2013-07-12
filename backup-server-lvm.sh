@@ -47,12 +47,12 @@ EOL
 
 # create 16GB Snapshot from VM store
 echo -e "\nCreate LVM Snapshot ..."
-$DEBUG "lvcreate -s /dev/vg00/vms -L16GB -n vms-snap"
+$DEBUG lvcreate -s /dev/vg00/vms -L16GB -n vms-snap
 
 
 echo -e "\nMount LVM Snapshot ..."
 if [ ! -d /mnt/snapshot ]; then mkdir /mnt/snapshot; fi
-$DEBUG "mount /dev/vg00/vms-snap /mnt/snapshot/"
+$DEBUG mount /dev/vg00/vms-snap /mnt/snapshot/
 
 echo -e "\nMove old backups ..."
 $DEBUG rm -rf $TARGET/$VM_NAME.3         $NOOUT
@@ -62,10 +62,10 @@ $DEBUG cp -al $TARGET/$VM_NAME $TARGET/$VM_NAME.1 $NOOUT
 $DEBUG rsync -av --progress /mnt/snapshot/$VM_NAME $TARGET
 
 echo -e "\nUmount LVM Snapshot ..."
-$DEBUG "umount /mnt/backups/"
+$DEBUG umount /mnt/backups/
 
 echo -e "\nRemove LVM Snapshot ..."
-$DEBUG "lvremove -f /dev/vg00/vms-snap"
+$DEBUG lvremove -f /dev/vg00/vms-snap
 
 
 
