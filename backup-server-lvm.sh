@@ -6,18 +6,20 @@ NOOUT=`&>/dev/null`
 #NOOUT="&>/dev/null" && DEBUG="echo -e \t$time "
 
 usage() {
-  echo -e "usage: ${0} SSH_HOSTNAME VM_NAME [TARGET]\n"
-  echo -e "\tSSH_HOSTNAME:\tName des zu sichernden Linux Servers"
+  echo -e "usage: ${0} VM_NAME [TARGET]\n"
   echo -e "\tVM_NAME:\tName der zu sichernden VirtualBox VM"
   echo -e "\t[TARGET]:\tZiel in dem die Datensicherung gespeichert wird.\n\t\t\tDefault: /cygdrive/e/\$VM_NAME"
 }
 
+# Helper function
 error() {
   echo -e "\n$1\n"
   usage
   exit 1
 }
 
+# Helper function
+# if DEBUG is true, echo all comands
 echoer() {
   [ -z $DEBUG ] && (
     echo -e $1
@@ -25,59 +27,45 @@ echoer() {
 }
 
 # Parameter prÃ¼fungen
-[ -z $1 ] && error "SSH_HOSTNAME fehlt (z.B. linux01)!\n" || SSH_HOSTNAME=$1
-
-[ -z $2 ] && error "VM_NAME fehlt (z.B. server-0)!\n" || VM_NAME=$2
-
-# Benutzername@Hostname zusammensetzen
-USER_HOSTNAME="root@$SSH_HOSTNAME"
-# SSH Befehl zusammenbauen
-SSH="ssh $USER_HOSTNAME"
+[ -z $1 ] && error "VM_NAME fehlt (z.B. server-0)!\n" || VM_NAME=$1
 
 
 # parameter2 ist das Ziel in dem die Datensicherung gespeichert wird
-[ -z $3 ] && TARGET=/cygdrive/e || TARGET=$3
-
-# Test LVM Snapshot
-echo -e "\nSystemprüfungen:"
-$DEBUG $SSH lvs|grep vms-snap
-[ $? -eq 0 ] && error "LVM Snapshot existiert bereits! Bitte Admin bescheid geben."
-
+[ -z $2 ] && TARGET=/cygdrive/e || TARGET=$2
 
 cat <<EOL
 
   Backup Skript
   =================
   Für die tägliche Datensicherung der Virtuellen Maschinen,
-  von einem laufenden Windows 7 aus.
 
-  Dieses Skript erstellt einen LVM Snapshot auf dem als erster Parameter 
-  übergebenen Rechner. Anschließend wird auf diesem Rechner die 
-  VM Partition gemountet und die als zweiter Parameter übergebene VM 
-  mit RSYNC gesichert.
+  Dieses Skript ist zur Verwendung in cron Tasks auf den Linux
+  Systemen gedach.
 
 EOL
 
 
-
+# create 16GB Snapshot from VM store
 echo -e "\nCreate LVM Snapshot ..."
-$DEBUG $SSH "lvcreate -s /dev/vg00/vms -L16GB -n vms-snap"
+$DEBUG "lvcreate -s /dev/vg00/vms -L16GB -n vms-snap"
+
 
 echo -e "\nMount LVM Snapshot ..."
-$DEBUG $SSH "mount /dev/vg00/vms-snap /mnt/backups/"
+if [ ! -d /mnt/snapshot ]; then mkdir /mnt/snapshot; fi
+$DEBUG "mount /dev/vg00/vms-snap /mnt/snapshot/"
 
 echo -e "\nMove old backups ..."
 $DEBUG rm -rf $TARGET/$VM_NAME.3         $NOOUT
 $DEBUG mv $TARGET/$VM_NAME.2 $TARGET/$VM_NAME.3   $NOOUT
 $DEBUG mv $TARGET/$VM_NAME.1 $TARGET/$VM_NAME.2   $NOOUT
 $DEBUG cp -al $TARGET/$VM_NAME $TARGET/$VM_NAME.1 $NOOUT
-$DEBUG rsync -av --progress  $USER_HOSTNAME:/mnt/backups/$VM_NAME $TARGET
+$DEBUG rsync -av --progress /mnt/snapshot/$VM_NAME $TARGET
 
 echo -e "\nUmount LVM Snapshot ..."
-$DEBUG $SSH "umount /mnt/backups/"
+$DEBUG "umount /mnt/backups/"
 
 echo -e "\nRemove LVM Snapshot ..."
-$DEBUG $SSH "lvremove -f /dev/vg00/vms-snap"
+$DEBUG "lvremove -f /dev/vg00/vms-snap"
 
 
 
