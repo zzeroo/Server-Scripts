@@ -62,7 +62,7 @@ $DEBUG cp -al $TARGET/$VM_NAME $TARGET/$VM_NAME.1 $NOOUT
 $DEBUG rsync -av --progress /mnt/snapshot/$VM_NAME $TARGET
 
 echo -e "\nUmount LVM Snapshot ..."
-$DEBUG umount /mnt/backups/
+$DEBUG umount /mnt/snapshot
 
 echo -e "\nRemove LVM Snapshot ..."
 $DEBUG lvremove -f /dev/vg00/vms-snap
